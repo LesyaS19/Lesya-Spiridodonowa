@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кроссворд: Анатомия</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f0f8ff;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .crossword {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(15, 40px);
+            grid-template-rows: repeat(15, 40px);
+            gap: 2px;
+            margin: 20px 0;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            position: relative;
+        }
+        .cell input {
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            border: 2px solid #34495e;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .cell input:focus {
+            outline: none;
+            border-color: #3498db;
+            background: #ecf0f1;
+        }
+        .cell input.correct {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        .cell input.incorrect {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+        .cell.black {
+            background: #2c3e50;
+        }
+        .cell .number {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 10px;
+            color: #e74c3c;
+            font-weight: bold;
+            z-index: 1;
+        }
+        .clues {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 300px;
+        }
+        .clues h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .clues ol {
+            line-height: 1.8;
+        }
+        .buttons {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .check-btn {
+            background: #27ae60;
+            color: white;
+        }
+        .check-btn:hover {
+            background: #229954;
+        }
+        .reset-btn {
+            background: #e74c3c;
+            color: white;
+        }
+        .reset-btn:hover {
+            background: #c0392b;
+        }
+        .message {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧬 Кроссворд: Анатомия 🧬</h1>
+
+    <div class="container">
+        <div class="crossword">
+            <div class="grid" id="grid"></div>
+            <div class="buttons">
+                <button class="check-btn" onclick="checkAnswers()">✓ Проверить</button>
+                <button class="reset-btn" onclick="resetCrossword()">↺ Очистить</button>
+            </div>
+            <div class="message" id="message"></div>
+        </div>
+
+        <div class="clues">
+            <h3>По горизонтали →</h3>
+            <ol id="across-clues"></ol>
+
+            <h3>По вертикали ↓</h3>
+            <ol id="down-clues"></ol>
+        </div>
+    </div>
+
+    <script>
+        const words = [
+            { word: "СЕРДЦЕ", clue: "Орган, перекачивающий кровь", row: 7, col: 3, dir: "H", num: 1 },
+            { word: "ПЕЧЕНЬ", clue: "Самая крупная железа организма", row: 5, col: 4, dir: "V", num: 2 },
+            { word: "РЕБРО", clue: "Кость грудной клетки", row: 7, col: 5, dir: "V", num: 3 },
+            { word: "МОЗГ", clue: "Главный орган нервной системы", row: 11, col: 4, dir: "H", num: 4 },
+            { word: "ПОЧКА", clue: "Орган мочевыделительной системы", row: 5, col: 4, dir: "H", num: 5 },
+            { word: "ЖЕЛУДОК", clue: "Орган пищеварения", row: 3, col: 6, dir: "V", num: 6 },
+            { word: "МЫШЦА", clue: "Орган опорно-двигательной системы", row: 4, col: 7, dir: "V", num: 7 },
+            { word: "КОСТЬ", clue: "Твёрдая ткань скелета", row: 9, col: 6, dir: "H", num: 8 },
+            { word: "СКЕЛЕТ", clue: "Каркас тела человека", row: 6, col: 5, dir: "H", num: 9 },
+            { word: "АРТЕРИЯ", clue: "Сосуд, несущий кровь от сердца", row: 10, col: 4, dir: "H", num: 10 }
+        ];
+
+        const grid = {};
+        const gridSize = 15;
+
+        // Заполняем сетку буквами
+        words.forEach(w => {
+            for (let i = 0; i < w.word.length; i++) {
+                const r = w.dir === "V" ? w.row + i : w.row;
+                const c = w.dir === "H" ? w.col + i : w.col;
+                const key = `${r},${c}`;
+                if (!grid[key]) {
+                    grid[key] = { letter: w.word[i], numbers: [] };
+                }
+                if (i === 0) {
+                    grid[key].numbers.push(w.num);
+                }
+            }
+        });
+
+        // Создаём HTML сетку
+        const gridEl = document.getElementById("grid");
+        for (let r = 0; r < gridSize; r++) {
+            for (let c = 0; c < gridSize; c++) {
+                const key = `${r},${c}`;
+                const cell = document.createElement("div");
+                cell.className = "cell";
+
+                if (grid[key]) {
+                    const input = document.createElement("input");
+                    input.type = "text";
+                    input.maxLength = 1;
+                    input.dataset.row = r;
+                    input.dataset.col = c;
+                    input.dataset.correct = grid[key].letter;
+                    input.addEventListener("input", function() {
+                        this.value = this.value.toUpperCase();
+                        if (this.value) {
+                            moveToNext(r, c);
+                        }
+                    });
+                    cell.appendChild(input);
+
+                    if (grid[key].numbers.length > 0) {
+                        const num = document.createElement("span");
+                        num.className = "number";
+                        num.textContent = grid[key].numbers.join(",");
+                        cell.appendChild(num);
+                    }
+                } else {
+                    cell.classList.add("black");
+                }
+
+                gridEl.appendChild(cell);
+            }
+        }
+
+        // Заполняем подсказки
+        const acrossClues = document.getElementById("across-clues");
+        const downClues = document.getElementById("down-clues");
+
+        words.forEach(w => {
+            const li = document.createElement("li");
+            li.textContent = `${w.num}. ${w.clue} (${w.word.length} букв)`;
+            if (w.dir === "H") {
+                acrossClues.appendChild(li);
+            } else {
+                downClues.appendChild(li);
+            }
+        });
+
+        function moveToNext(r, c) {
+            const directions = [[0, 1], [1, 0]];
+            for (const [dr, dc] of directions) {
+                const nextKey = `${r + dr},${c + dc}`;
+                if (grid[nextKey]) {
+                    const nextInput = document.querySelector(`input[data-row="${r + dr}"][data-col="${c + dc}"]`);
+                    if (nextInput && !nextInput.value) {
+                        nextInput.focus();
+                        return;
+                    }
+                }
+            }
+        }
+
+        function checkAnswers() {
+            const inputs = document.querySelectorAll("input[data-correct]");
+            let allCorrect = true;
+            let filled = 0;
+
+            inputs.forEach(input => {
+                input.classList.remove("correct", "incorrect");
+                if (input.value) {
+                    filled++;
+                    if (input.value === input.dataset.correct) {
+                        input.classList.add("correct");
+                    } else {
+                        input.classList.add("incorrect");
+                        allCorrect = false;
+                    }
+                } else {
+                    allCorrect = false;
+                }
+            });
+
+            const message = document.getElementById("message");
+            if (allCorrect) {
+                message.className = "message success";
+                message.textContent = "🎉 Поздравляем! Кроссворд разгадан правильно!";
+            } else if (filled === inputs.length) {
+                message.className = "message error";
+                message.textContent = "❌ Есть ошибки. Красным отмечены неверные буквы.";
+            } else {
+                message.className = "message error";
+                message.textContent = `⚠️ Заполнено ${filled} из ${inputs.length} клеток. Продолжайте!`;
+            }
+        }
+
+        function resetCrossword() {
+            document.querySelectorAll("input[data-correct]").forEach(input => {
+                input.value = "";
+                input.classList.remove("correct", "incorrect");
+            });
+            document.getElementById("message").className = "message";
+        }
+    </script>
+</body>
+</html>
